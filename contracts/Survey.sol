@@ -12,6 +12,10 @@ struct Answer {
 }
 
 contract Survey {
+  // Key-Value Storage (like hashMap)
+  // Key range
+  // 0x... : 0
+  // 0xFF... : 2^256 - 1
   string public title;
   string public description;
   uint256 public targetNumber;
@@ -19,7 +23,7 @@ contract Survey {
   Question[] questions;
   Answer[] answers;
 
-  // primitive: int, bool, uint
+  // primitive: (u)int(8~256), bool, address
   // memory, storage, calldata
   constructor(
     string memory _title,
