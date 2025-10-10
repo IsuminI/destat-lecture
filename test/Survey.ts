@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
 import { network } from "hardhat";
-
+import type { SurveyFactory } from "../types/ethers-contracts/SurveyFactory.sol/SurveyFactory.js";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 interface Question {
   question: string;
   options: string[];
@@ -67,7 +68,10 @@ it("Survey init", async () => {
 });
 
 describe("SurveyFactory Contract", () => {
-  let factory, owner, respondent1, respondent2;
+  let factory: SurveyFactory,
+    owner: HardhatEthersSigner,
+    respondent1,
+    respondent2;
 
   const title = "막무가내 설문조사";
   const description = "1111";
@@ -91,14 +95,12 @@ describe("SurveyFactory Contract", () => {
 
   it("should deploy with correct minimum amounts", async () => {
     // TODO: check min_pool_amount and min_reward_amount
-    const { ethers } = await network.connect();
     expect(await factory.min_pool_amount()).eq(ethers.parseEther("50"));
     expect(await factory.min_reward_amount()).eq(ethers.parseEther("0.1"));
   });
 
   it("should create a new survey when valid values are provided", async () => {
     // TODO: prepare SurveySchema and call createSurvey with msg.value
-    const { ethers } = await network.connect();
     const tx = await factory.createSurvey(
       {
         title,
@@ -112,7 +114,15 @@ describe("SurveyFactory Contract", () => {
     );
 
     // TODO: check event SurveyCreated emitted
-    expect(tx).emit(await factory, "SurveyCreated");
+    const receipt = await tx.wait();
+    let surveyAddress;
+    receipt?.logs.forEach((log) => {
+      const event = factory.interface.parseLog(log);
+      if (event?.name == "SurveyCreated") {
+        surveyAddress = event.args[0];
+      }
+    });
+    await expect(tx).emit(factory, "SurveyCreated").withArgs(surveyAddress);
 
     // TODO: check surveys array length increased
     expect((await factory.getSurveys()).length).eq(1);
@@ -120,7 +130,6 @@ describe("SurveyFactory Contract", () => {
 
   it("should revert if pool amount is too small", async () => {
     // TODO: expect revert when msg.value < min_pool_amount
-    const { ethers } = await network.connect();
     await expect(
       factory.createSurvey(
         {
@@ -133,12 +142,11 @@ describe("SurveyFactory Contract", () => {
           value: ethers.parseEther("1"),
         },
       ),
-    ).revertedWith("insufficient pool amount");
+    ).to.be.revertedWith("insufficient pool amount");
   });
 
   it("should revert if reward amount per respondent is too small", async () => {
     // TODO: expect revert when msg.value / targetNumber < min_reward_amount
-    const { ethers } = await network.connect();
     await expect(
       factory.createSurvey(
         {
@@ -151,16 +159,19 @@ describe("SurveyFactory Contract", () => {
           value: ethers.parseEther("100"),
         },
       ),
-    ).revertedWith("insufficient reward amount");
+    ).to.be.revertedWith("insufficient reward amount");
   });
 
   it("should store created surveys and return them from getSurveys", async () => {
-    const { ethers } = await network.connect();
     // TODO: create multiple surveys and check getSurveys output
-    factory = await ethers.deployContract("SurveyFactory", [
+    const { ethers } = await network.connect();
+
+    const factory = await ethers.deployContract("SurveyFactory", [
       ethers.parseEther("50"),
       ethers.parseEther("0.1"),
     ]);
+
+    const surveyAddresses: string[] = [];
     for (let i = 0; i < 10; i++) {
       const title = "설문조사 " + i;
       const description = "설명 " + i;
@@ -171,7 +182,7 @@ describe("SurveyFactory Contract", () => {
         },
       ];
 
-      await factory.createSurvey(
+      const tx = await factory.createSurvey(
         {
           title,
           description,
@@ -182,12 +193,27 @@ describe("SurveyFactory Contract", () => {
           value: ethers.parseEther("100"),
         },
       );
+      const receipt = await tx.wait();
+      let surveyAddress;
+      receipt?.logs.forEach((log) => {
+        const event = factory.interface.parseLog(log);
+        if (event?.name == "SurveyCreated") {
+          surveyAddress = event.args[0];
+          surveyAddresses.push(surveyAddress);
+        }
+      });
+      if (surveyAddress) {
+        const surveyC = await ethers.getContractFactory("Survey");
+        const survey = await surveyC.attach(surveyAddress);
+        console.log(await survey.title());
+      }
     }
 
     const surveys = await factory.getSurveys();
+
     for (let i = 0; i < 10; i++) {
-      const Survey = await ethers.getContractFactory("Survey");
-      const survey = await Survey.attach(surveys[i]);
+      const surveyC = await ethers.getContractFactory("Survey");
+      const survey = await surveyC.attach(surveyAddresses[i]);
       expect(await survey.title()).equals("설문조사 " + i);
       expect(await survey.description()).equals("설명 " + i);
     }
