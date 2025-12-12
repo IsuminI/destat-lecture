@@ -16,7 +16,7 @@ contract SurveyFactory {
   uint256 public min_pool_amount;
   uint256 public min_reward_amount;
   Survey[] surveys;
-
+  uint256 temp;
   // ex)
   // pool amount : 50 eth
   // target respondents number : 100
