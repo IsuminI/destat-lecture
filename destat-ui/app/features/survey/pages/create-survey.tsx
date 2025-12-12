@@ -9,21 +9,53 @@ import {
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import type { Route } from "./+types/create-survey";
-import { useState } from "react";
-import { useWriteContract } from "wagmi";
+import { useEffect, useState } from "react";
+import {
+  useAccount,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import { SURVEY_FACTORY, SURVEY_FACTORY_ABI } from "../constant";
-import { parseEther } from "viem";
+import { decodeEventLog, parseEther } from "viem";
+import { supabase } from "~/postgres/supaclient";
 
-// export const action = async ({ request }: Route.ActionArgs) => {
-//   const formData = await request.formData();
-//   console.log(formData);
-// };
+export const action = async ({ request }: Route.ActionArgs) => {
+  const formData = await request.formData();
+  const metadata = JSON.parse(formData.get("metadata") as string);
+  const image = formData.get("image") as File;
+
+  const { data, error } = await supabase.storage
+    .from("images")
+    .upload(metadata.id, image);
+  if (!error) {
+    const publicUrl = await supabase.storage
+      .from("images")
+      .getPublicUrl(data.path);
+    const { data: survey, error } = await supabase.from("survey").insert({
+      id: metadata.id,
+      title: metadata.title,
+      description: metadata.description,
+      target_number: metadata.targetNumber,
+      reward_amount: metadata.rewardAmount,
+      image: publicUrl.data.publicUrl,
+      questions: metadata.questions,
+      owner: metadata.owner,
+    });
+    console.log(error);
+  }
+};
 
 // [2, 3, 2] : number of options per questions
 export default function CreateSuvey() {
   const [options, setOptions] = useState([1]);
   const [image, setImage] = useState("");
-  const { writeContract } = useWriteContract();
+  const [formImage, setFormImage] = useState<File>();
+  const { data: hash, writeContract } = useWriteContract();
+  const { data: receipt, isFetched } = useWaitForTransactionReceipt({
+    hash,
+  });
+  const [surveyMeta, setSurveyMeta] = useState({});
+  const { address } = useAccount();
 
   const uploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -70,6 +102,8 @@ export default function CreateSuvey() {
     const description = formData.get("description") as string;
     const targetNumber = formData.get("target") as string;
     const poolSize = formData.get("pool") as string;
+    const formImg = formData.get("image") as File;
+    setFormImage(formImg);
     writeContract({
       address: SURVEY_FACTORY,
       abi: SURVEY_FACTORY_ABI,
@@ -84,7 +118,45 @@ export default function CreateSuvey() {
       ],
       value: parseEther(poolSize),
     });
+    setSurveyMeta({
+      title,
+      description,
+      targetNumber,
+      rewardAmount: Number(poolSize) / Number(targetNumber),
+      questions,
+      owner: address,
+    });
   };
+
+  useEffect(() => {
+    if (!isFetched || !receipt || !formImage) return;
+    const callAction = async () => {
+      let contractAddress;
+      for (const log of receipt?.logs) {
+        const event = decodeEventLog({
+          abi: SURVEY_FACTORY_ABI,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (event.eventName === "SurveyCreated") {
+          contractAddress = event.args[0];
+        }
+      }
+      const formData = new FormData();
+      const newSurveyMeta = {
+        ...surveyMeta,
+        id: contractAddress,
+      };
+      formData.append("metadata", JSON.stringify(newSurveyMeta));
+      formData.append("image", formImage);
+      await fetch("/survey/create", {
+        method: "post",
+        body: formData,
+      });
+    };
+    callAction();
+  }, [receipt]);
+
   return (
     <div className="flex justify-center w-full ">
       <Card className="w-full max-w-xl">
@@ -123,6 +195,7 @@ export default function CreateSuvey() {
                     <div className="flex items-center" key={`${i} - ${j}`}>
                       {j == n - 1 && j != 0 ? (
                         <Button
+                          type="button"
                           onClick={() => deleteOption(i)}
                           className="h-8 w-8 rounded-full mr-1 bg-red-200"
                         >
@@ -138,6 +211,7 @@ export default function CreateSuvey() {
                       />
                       {j == n - 1 && (
                         <Button
+                          type="button"
                           onClick={() => addOption(i)}
                           className="h-8 w-8 rounded-full ml-1 bg-gray-300"
                         >
@@ -151,12 +225,14 @@ export default function CreateSuvey() {
             ))}
             <div className="flex justify-center items-center mb-4">
               <Button
+                type="button"
                 onClick={() => deleteQuestion()}
                 className="h-8 w-8 rounded-full mr-1 bg-red-200"
               >
                 -
               </Button>
               <Button
+                type="button"
                 onClick={() => addQuestion()}
                 className="h-8 w-8 rounded-full mr-1 bg-gray-300"
               >
