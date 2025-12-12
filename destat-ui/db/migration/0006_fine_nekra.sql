@@ -1,0 +1,1 @@
+ALTER TABLE "daily_live_visitor" RENAME TO "daily_live_survey";

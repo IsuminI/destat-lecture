@@ -17,20 +17,30 @@ export type Database = {
       answer: {
         Row: {
           answers: Json | null
+          created_at: string | null
           id: number
           survey_id: string | null
         }
         Insert: {
           answers?: Json | null
+          created_at?: string | null
           id?: number
           survey_id?: string | null
         }
         Update: {
           answers?: Json | null
+          created_at?: string | null
           id?: number
           survey_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "answer_survey_id_survey_id_fk"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "all_survey_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "answer_survey_id_survey_id_fk"
             columns: ["survey_id"]
@@ -40,8 +50,45 @@ export type Database = {
           },
         ]
       }
+      daily_live_survey: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          id: number
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          id?: number
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
+      daily_visitor: {
+        Row: {
+          count: number | null
+          day_start: string
+          id: number
+        }
+        Insert: {
+          count?: number | null
+          day_start: string
+          id?: number
+        }
+        Update: {
+          count?: number | null
+          day_start?: string
+          id?: number
+        }
+        Relationships: []
+      }
       survey: {
         Row: {
+          created_at: string | null
           description: string
           finish: boolean | null
           id: string
@@ -54,6 +101,7 @@ export type Database = {
           view: number | null
         }
         Insert: {
+          created_at?: string | null
           description: string
           finish?: boolean | null
           id: string
@@ -66,6 +114,7 @@ export type Database = {
           view?: number | null
         }
         Update: {
+          created_at?: string | null
           description?: string
           finish?: boolean | null
           id?: string
@@ -81,10 +130,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      all_survey_overview: {
+        Row: {
+          count: number | null
+          description: string | null
+          id: string | null
+          image: string | null
+          title: string | null
+          view: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      increment_daily_visitor: { Args: { day: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

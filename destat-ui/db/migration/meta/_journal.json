@@ -15,6 +15,41 @@
       "when": 1765546580535,
       "tag": "0001_smiling_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765547866016,
+      "tag": "0002_clammy_lenny_balinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765548097791,
+      "tag": "0003_quick_liz_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765548341135,
+      "tag": "0004_shallow_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765548972363,
+      "tag": "0005_clumsy_boomerang",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765549141514,
+      "tag": "0006_fine_nekra",
+      "breakpoints": true
     }
   ]
 }
