@@ -16,6 +16,13 @@ import type { Route } from "./+types/survey";
 import { useEffect, useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { SURVEY_ABI } from "../constant";
+import { supabase } from "~/postgres/supaclient";
+
+export const loader = async ({ params }: Route.LoaderArgs) => {
+  await supabase.rpc("increment_survey_view", {
+    survey_id: params.surveyId,
+  });
+};
 
 export const action = async ({ request }: Route.ActionArgs) => {
   const formData = await request.formData();
@@ -33,44 +40,49 @@ interface Questions {
 
 const questions: Questions[] = [
   {
-    question: "오늘 하루 기분은 어땠나요?",
-    options: ["좋았어요", "보통이에요", "별로였어요"],
+    question: "?��?�� ?���? 기분??? ?��?��?��?��?",
+    options: ["좋았?��?��", "보통?��?��?��", "별로????��?��"],
   },
   {
-    question: "오늘 가장 집중이 잘 되었던 시간대는 언제인가요?",
-    options: ["아침", "점심", "저녁", "없었어요"],
+    question: "?��?�� �??�� 집중?�� ?�� ?��?��?�� ?��간�???�� ?��?��?���??��?",
+    options: ["?���?", "?��?��", "????��", "?��?��?��?��"],
   },
   {
-    question: "오늘의 스트레스 수준을 평가한다면?",
-    options: ["전혀 없음", "낮음", "보통", "높음"],
+    question: "?��?��?�� ?��?��?��?�� ?���??�� ?���??��?���??",
+    options: ["?��??? ?��?��", "?��?��", "보통", "?��?��"],
   },
   {
-    question: "오늘 운동을 하셨나요?",
-    options: ["예", "아니요"],
+    question: "?��?�� ?��?��?�� ?��?��?��?��?",
+    options: ["?��", "?��?��?��"],
   },
   {
-    question: "오늘 얼마나 휴식을 취했나요?",
-    options: ["충분히", "보통", "부족하게"],
+    question: "?��?�� ?��마나 ?��?��?�� 취했?��?��?",
+    options: ["충분?��", "보통", "�?족하�?"],
   },
   {
-    question: "오늘 몇 시간을 공부/일에 사용했나요?",
-    options: ["1시간 이하", "1~3시간", "3~5시간", "5시간 이상"],
+    question: "?��?�� �? ?��간을 공�??/?��?�� ?��?��?��?��?��?",
+    options: ["1?���? ?��?��", "1~3?���?", "3~5?���?", "5?���? ?��?��"],
   },
   {
-    question: "오늘 새로운 것을 배운 것이 있나요?",
-    options: ["예", "아니요"],
+    question: "?��?�� ?��로운 것을 배운 것이 ?��?��?��?",
+    options: ["?��", "?��?��?��"],
   },
   {
-    question: "오늘 사람들과의 관계는 어땠나요?",
-    options: ["매우 좋았어요", "좋았어요", "보통", "나빴어요"],
+    question: "?��?�� ?��?��?��과의 �?계는 ?��?��?��?��?",
+    options: ["매우 좋았?��?��", "좋았?��?��", "보통", "?��빴어?��"],
   },
   {
-    question: "오늘 식사는 잘 챙겨 먹었나요?",
-    options: ["세끼 모두 먹음", "두 끼만 먹음", "한 끼만 먹음", "못 먹음"],
+    question: "?��?�� ?��?��?�� ?�� 챙겨 먹었?��?��?",
+    options: [
+      "?��?�� 모두 먹음",
+      "?�� ?���? 먹음",
+      "?�� ?���? 먹음",
+      "�? 먹음",
+    ],
   },
   {
-    question: "오늘 하루를 한 단어로 표현한다면?",
-    options: ["행복", "성장", "지침", "평온", "바쁨"],
+    question: "?��?�� ?��루�?? ?�� ?��?���? ?��?��?��?���??",
+    options: ["?���?", "?��?��", "�?�?", "?��?��", "바쁨"],
   },
 ];
 

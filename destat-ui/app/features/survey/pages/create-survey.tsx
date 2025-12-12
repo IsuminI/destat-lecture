@@ -132,12 +132,14 @@ export default function CreateSuvey() {
     if (!isFetched || !receipt || !formImage) return;
     const callAction = async () => {
       let contractAddress;
+      console.log(receipt?.logs);
       for (const log of receipt?.logs) {
         const event = decodeEventLog({
           abi: SURVEY_FACTORY_ABI,
           data: log.data,
           topics: log.topics,
         });
+        console.log("evnet args :: " + event.args);
         if (event.eventName === "SurveyCreated") {
           contractAddress = event.args[0];
         }
@@ -149,6 +151,7 @@ export default function CreateSuvey() {
       };
       formData.append("metadata", JSON.stringify(newSurveyMeta));
       formData.append("image", formImage);
+
       await fetch("/survey/create", {
         method: "post",
         body: formData,

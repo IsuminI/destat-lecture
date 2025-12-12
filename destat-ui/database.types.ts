@@ -144,6 +144,7 @@ export type Database = {
     }
     Functions: {
       increment_daily_visitor: { Args: { day: string }; Returns: undefined }
+      increment_survey_view: { Args: { survey_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
