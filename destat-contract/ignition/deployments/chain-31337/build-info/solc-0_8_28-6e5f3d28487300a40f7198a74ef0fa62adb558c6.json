@@ -1,0 +1,43 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-6e5f3d28487300a40f7198a74ef0fa62adb558c6",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/SurveyFactory.sol": "project/contracts/SurveyFactory.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "project/contracts/Survey.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.28;\r\n\r\nstruct Question {\r\n  string question;\r\n  string[] options;\r\n}\r\n\r\nstruct Answer {\r\n  address respondent;\r\n  uint8[] answers;\r\n}\r\n\r\ncontract Survey {\r\n  // Key-Value Storage (like hashMap)\r\n  // Key range\r\n  // 0x... : 0\r\n  // 0xFF... : 2^256 - 1\r\n  string public title;\r\n  string public description;\r\n  uint256 public targetNumber;\r\n  uint256 public rewardAmount;\r\n  Question[] questions;\r\n  Answer[] answers;\r\n  mapping(address => uint) testMap;\r\n\r\n  // primitive: (u)int(8~256), bool, address\r\n  // memory, storage, calldata\r\n  constructor(\r\n    string memory _title,\r\n    string memory _description,\r\n    uint256 _targetNumber,\r\n    Question[] memory _questions\r\n  ) payable {\r\n    title = _title;\r\n    description = _description;\r\n    targetNumber = _targetNumber;\r\n    rewardAmount = msg.value / _targetNumber;\r\n    testMap[0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199] = 1000;\r\n    for (uint i = 0; i < _questions.length; i++) {\r\n      questions.push(\r\n        Question({\r\n          question: _questions[i].question,\r\n          options: _questions[i].options\r\n        })\r\n      );\r\n\r\n      //   Question storage q = questions.push();\r\n      //   q.question = _questions[i].question;\r\n      //   q.options = _questions[i].options;\r\n    }\r\n  }\r\n\r\n  function submitAnswer(Answer calldata _answer) external {\r\n    // length validation\r\n    require(\r\n      _answer.answers.length == questions.length,\r\n      \"Mismatched answers length\"\r\n    );\r\n    require(answers.length < targetNumber, \"This survey has been ended\");\r\n\r\n    answers.push(\r\n      Answer({respondent: _answer.respondent, answers: _answer.answers})\r\n    );\r\n\r\n    payable(msg.sender).transfer(rewardAmount);\r\n  }\r\n\r\n  function getAnswers() external view returns (Answer[] memory) {\r\n    return answers;\r\n  }\r\n\r\n  function getQuestions() external view returns (Question[] memory) {\r\n    return questions;\r\n  }\r\n}\r\n"
+      },
+      "project/contracts/SurveyFactory.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.28;\r\n\r\nimport \"./Survey.sol\";\r\n\r\nstruct SurveyScheme {\r\n  string title;\r\n  string description;\r\n  uint256 targetNumber;\r\n  Question[] questions;\r\n}\r\n\r\nevent SurveyCreated(address);\r\n\r\ncontract SurveyFactory {\r\n  uint256 public min_pool_amount;\r\n  uint256 public min_reward_amount;\r\n  Survey[] surveys;\r\n\r\n  // ex)\r\n  // pool amount : 50 eth\r\n  // target respondents number : 100\r\n  // reward : 50 eth / 100 == 0.5 eth\r\n  constructor(uint256 _min_pool_amount, uint256 _min_rerward_amount) {\r\n    min_pool_amount = _min_pool_amount;\r\n    min_reward_amount = _min_rerward_amount;\r\n  }\r\n\r\n  function createSurvey(SurveyScheme calldata _survey) external payable {\r\n    require(msg.value >= min_pool_amount, \"insufficient pool amount\");\r\n    require(\r\n      msg.value / _survey.targetNumber >= min_reward_amount,\r\n      \"insufficient reward amount\"\r\n    );\r\n\r\n    Survey survey = new Survey{value: msg.value}(\r\n      _survey.title,\r\n      _survey.description,\r\n      _survey.targetNumber,\r\n      _survey.questions\r\n    );\r\n    surveys.push(survey);\r\n    emit SurveyCreated(address(survey));\r\n  }\r\n\r\n  function getSurveys() external view returns (Survey[] memory) {\r\n    return surveys;\r\n  }\r\n}\r\n"
+      }
+    }
+  }
+}
