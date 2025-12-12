@@ -58,6 +58,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     .select("count, created_at")
     .order("created_at");
   let formedLivedSurveyCount = [{ date: "", data: 0 }];
+  let formedArchivedSurveyCount = [{ date: "", data: 0 }];
   if (liveSurveyCount) {
     formedLivedSurveyCount = liveSurveyCount.map((c) => {
       return {
@@ -65,14 +66,43 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
         data: c.count,
       };
     });
+    formedArchivedSurveyCount = liveSurveyCount.map((c) => {
+      return {
+        date: c.created_at,
+        data: c.count,
+      };
+    });
   }
 
-  const numberCard = await getNumberData(
+  // const { data: archivedSurveyCount } = await supabase
+  //   .from("daily_archived_survey")
+  //   .select("count, created_at")
+  //   .order("created_at");
+
+  const totalVisitors = await getNumberData(
     lastWeekStart,
     thisWeekStart,
     thisWeekEnd
   );
-  return { ...numberCard, formedLivedSurveyCount };
+
+  const liveVisitors = await getNumberData(
+    lastWeekStart,
+    thisWeekStart,
+    thisWeekEnd
+  );
+
+  const archivedVisitors = await getNumberData(
+    lastWeekStart,
+    thisWeekStart,
+    thisWeekEnd
+  );
+  return {
+    ...totalVisitors,
+    liveVisitors,
+    archivedVisitors,
+    formedLivedSurveyCount,
+    formedArchivedSurveyCount,
+  };
 };
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
@@ -88,17 +118,23 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         />
         <TrendCard
           title={"Live Visitors"}
-          value={"123"}
-          trendValue={"200%"}
-          trendMessage={"Trending up"}
-          periodMessage={"last 6 months "}
+          value={loaderData.liveVisitors.value}
+          trendValue={loaderData.liveVisitors.trendValue + "%"}
+          trendMessage={
+            loaderData.liveVisitors.upAndDown ? "Trending Up" : "Tranding Down"
+          }
+          periodMessage={"last 7 days"}
         />
         <TrendCard
           title={"Archived Visitors"}
-          value={"123,123"}
-          trendValue={"200%"}
-          trendMessage={"Trending up"}
-          periodMessage={"last 6 months "}
+          value={loaderData.archivedVisitors.value}
+          trendValue={loaderData.archivedVisitors.trendValue + "%"}
+          trendMessage={
+            loaderData.archivedVisitors.upAndDown
+              ? "Trending Up"
+              : "Tranding Down"
+          }
+          periodMessage={"last 7 days"}
         />
       </div>
       <div className="grid grid-cols-2 mt-5 gap-5 w-full">
@@ -114,7 +150,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           description={"Daily archived survey count"}
           trendMessage={""}
           periodMessage={""}
-          chartData={data}
+          chartData={loaderData.formedArchivedSurveyCount}
         />
       </div>
     </div>
