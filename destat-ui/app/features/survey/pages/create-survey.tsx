@@ -22,11 +22,14 @@ import { supabase } from "~/postgres/supaclient";
 export const action = async ({ request }: Route.ActionArgs) => {
   const formData = await request.formData();
   const metadata = JSON.parse(formData.get("metadata") as string);
-  const image = formData.get("image") as File;
+  // for (const [key, value] of formData.entries()) {
+  //   console.log(key, value);
+  // }
+  const imageFile = formData.get("image") as File;
 
   const { data, error } = await supabase.storage
     .from("images")
-    .upload(metadata.id, image);
+    .upload(metadata.id, imageFile);
   if (!error) {
     const publicUrl = await supabase.storage
       .from("images")
@@ -41,10 +44,9 @@ export const action = async ({ request }: Route.ActionArgs) => {
       questions: metadata.questions,
       owner: metadata.owner,
     });
-    console.log(error);
+    // console.log("error : " + error);
   }
 };
-
 // [2, 3, 2] : number of options per questions
 export default function CreateSuvey() {
   const [options, setOptions] = useState([1]);
@@ -132,14 +134,12 @@ export default function CreateSuvey() {
     if (!isFetched || !receipt || !formImage) return;
     const callAction = async () => {
       let contractAddress;
-      console.log(receipt?.logs);
       for (const log of receipt?.logs) {
         const event = decodeEventLog({
           abi: SURVEY_FACTORY_ABI,
           data: log.data,
           topics: log.topics,
         });
-        console.log("evnet args :: " + event.args);
         if (event.eventName === "SurveyCreated") {
           contractAddress = event.args[0];
         }
