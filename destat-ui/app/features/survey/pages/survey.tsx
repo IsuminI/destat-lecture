@@ -24,11 +24,20 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     survey_id: params.surveyId,
   });
 
-  const { data, error } = await supabase
+  const { data: messages } = await supabase
     .from("message")
     .select("*")
     .eq("survey_id", params.surveyId);
-  return data;
+
+  const { data: survey } = await supabase
+    .from("survey")
+    .select("finish")
+    .eq("id", params.surveyId)
+    .single();
+  return {
+    messages: messages || [],
+    finish: survey?.finish || false,
+  };
 };
 
 export const action = async ({ request, params }: Route.ActionArgs) => {
@@ -49,44 +58,50 @@ interface Questions {
 
 const questions: Questions[] = [
   {
-    question: "오늘 하루 기분은 어땠나요?",
-    options: ["좋았어요", "보통이에요", "별로였어요"],
+    question: "?��?�� ?���?? 기분??? ?��?��?��?��?",
+    options: ["좋았?��?��", "보통?��?��?��", "별로????��?��"],
   },
   {
-    question: "오늘 가장 집중이 잘 되었던 시간대는 언제인가요?",
-    options: ["아침", "점심", "저녁", "없었어요"],
+    question:
+      "?��?�� �???�� 집중?�� ?�� ?��?��?�� ?��간�???�� ?��?��?���???��?",
+    options: ["?���??", "?��?��", "????��", "?��?��?��?��"],
   },
   {
-    question: "오늘의 스트레스 수준을 평가한다면?",
-    options: ["전혀 없음", "낮음", "보통", "높음"],
+    question: "?��?��?�� ?��?��?��?�� ?���???�� ?���???��?���???",
+    options: ["?��??? ?��?��", "?��?��", "보통", "?��?��"],
   },
   {
-    question: "오늘 운동을 하셨나요?",
-    options: ["예", "아니요"],
+    question: "?��?�� ?��?��?�� ?��?��?��?��?",
+    options: ["?��", "?��?��?��"],
   },
   {
-    question: "오늘 얼마나 휴식을 취했나요?",
-    options: ["충분히", "보통", "부족하게"],
+    question: "?��?�� ?��마나 ?��?��?�� 취했?��?��?",
+    options: ["충분?��", "보통", "�??족하�??"],
   },
   {
-    question: "오늘 몇 시간을 공부/일에 사용했나요?",
-    options: ["1시간 이하", "1~3시간", "3~5시간", "5시간 이상"],
+    question: "?��?�� �?? ?��간을 공�??/?��?�� ?��?��?��?��?��?",
+    options: ["1?���?? ?��?��", "1~3?���??", "3~5?���??", "5?���?? ?��?��"],
   },
   {
-    question: "오늘 새로운 것을 배운 것이 있나요?",
-    options: ["예", "아니요"],
+    question: "?��?�� ?��로운 것을 배운 것이 ?��?��?��?",
+    options: ["?��", "?��?��?��"],
   },
   {
-    question: "오늘 사람들과의 관계는 어땠나요?",
-    options: ["매우 좋았어요", "좋았어요", "보통", "나빴어요"],
+    question: "?��?�� ?��?��?��과의 �??계는 ?��?��?��?��?",
+    options: ["매우 좋았?��?��", "좋았?��?��", "보통", "?��빴어?��"],
   },
   {
-    question: "오늘 식사는 잘 챙겨 먹었나요?",
-    options: ["세끼 모두 먹음", "두 끼만 먹음", "한 끼만 먹음", "못 먹음"],
+    question: "?��?�� ?��?��?�� ?�� 챙겨 먹었?��?��?",
+    options: [
+      "?��?�� 모두 먹음",
+      "?�� ?���?? 먹음",
+      "?�� ?���?? 먹음",
+      "�?? 먹음",
+    ],
   },
   {
-    question: "오늘 하루를 한 단어로 표현한다면?",
-    options: ["행복", "성장", "지침", "평온", "바쁨"],
+    question: "?��?�� ?��루�?? ?�� ?��?���?? ?��?��?��?���???",
+    options: ["?���??", "?��?��", "�??�??", "?��?��", "바쁨"],
   },
 ];
 
@@ -112,7 +127,7 @@ export default function Survey({ params, loaderData }: Route.ComponentProps) {
   const { writeContract } = useWriteContract();
   const { address } = useAccount();
 
-  const submitAnswer = (e: React.FormEvent<HTMLFormElement>) => {
+  const submitAnswer = async (e: React.FormEvent<HTMLFormElement>) => {
     if (!address) {
       alert("Please connect wallet before submiting answer");
       return;
@@ -128,7 +143,25 @@ export default function Survey({ params, loaderData }: Route.ComponentProps) {
       functionName: "submitAnswer",
       args: [{ respondent: address, answers }],
     });
+
+    await supabase.from("answer").insert({
+      survey_id: params.surveyId as `0x{string}`,
+      answers: answers,
+    });
+
+    const { count } = await supabase
+      .from("answer")
+      .select("*", { count: "exact", head: true })
+      .eq("survey_id", params.surveyId);
+
+    if (target && count !== null && count >= Number(target)) {
+      await supabase
+        .from("survey")
+        .update({ finish: true })
+        .eq("id", params.surveyId);
+    }
   };
+
   const { data: answers } = useReadContract({
     address: params.surveyId as `0x{string}`,
     abi: SURVEY_ABI,
@@ -143,8 +176,8 @@ export default function Survey({ params, loaderData }: Route.ComponentProps) {
   });
   const [counts, setCounts] = useState<Number[][]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
-  const [messages, setMessages] = useState(loaderData ? loaderData : []);
-
+  const [messages, setMessages] = useState(loaderData?.messages || []);
+  const [isFinished, setIsFinished] = useState(loaderData?.finish || false);
   const countAnswers = () => {
     // 0:[0,0,0] --> [1,0,0]
     // 1:[0,0,1]
@@ -172,6 +205,17 @@ export default function Survey({ params, loaderData }: Route.ComponentProps) {
     }
   }, [answers, address, target]);
 
+  // isFinished일 때도 counts 계산
+  useEffect(() => {
+    if (isFinished && answers && questions && target) {
+      const calculatedCounts = countAnswers();
+      if (calculatedCounts) {
+        setCounts(calculatedCounts);
+        setIsAnswered(true);
+      }
+    }
+  }, [isFinished, answers, questions, target]);
+
   useEffect(() => {
     const channels = supabase
       .channel("message_insert_event")
@@ -193,14 +237,18 @@ export default function Survey({ params, loaderData }: Route.ComponentProps) {
       .subscribe();
   }, []);
 
+  const displayTitle = isFinished && title ? `${title} (종료됨)` : title;
+
   return (
     <div className="grid grid-cols-3 w-screen gap-3">
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle className="font-extrabold text-3xl">{title}</CardTitle>
+          <CardTitle className="font-extrabold text-3xl">
+            {displayTitle}
+          </CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
-        {isAnswered ? (
+        {isAnswered || isFinished ? (
           <CardContent className="overflow-y-auto h-[70vh]">
             <h1 className="font-semibold text-xl pb-2">Survey Progress</h1>
             <div className="gap-5 grid grid-cols-2">
@@ -216,7 +264,7 @@ export default function Survey({ params, loaderData }: Route.ComponentProps) {
                         <div className="w-full bg-gray-200 h-5 rounded-full overflow-hidden">
                           <div
                             className="bg-blue-400 h-5 rounded-full"
-                            style={{ width: `${counts[i][j]}%` }}
+                            style={{ width: `${counts[i]?.[j] || 0}%` }}
                           ></div>
                         </div>
                       </div>
