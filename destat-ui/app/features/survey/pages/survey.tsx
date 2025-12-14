@@ -17,20 +17,29 @@ import { useEffect, useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { SURVEY_ABI } from "../constant";
 import { supabase } from "~/postgres/supaclient";
+import type { Database } from "database.types";
 
-export const loader = async ({ params }: Route.LoaderArgs) => {
+export const loader = async ({ request, params }: Route.LoaderArgs) => {
   await supabase.rpc("increment_survey_view", {
     survey_id: params.surveyId,
   });
+
+  const { data, error } = await supabase
+    .from("message")
+    .select("*")
+    .eq("survey_id", params.surveyId);
+  return data;
 };
 
-export const action = async ({ request }: Route.ActionArgs) => {
+export const action = async ({ request, params }: Route.ActionArgs) => {
   const formData = await request.formData();
-  // [2, 1, 0, ...]
-  const answers = Object.fromEntries(formData);
-  //   console.log(formData);
-  //   console.log(answers);
-  // console.log(Object.values(answers).map((str) => Number(str)));
+  const message = formData.get("message");
+  const sender = formData.get("sender");
+  await supabase.from("message").insert({
+    sender: sender as string,
+    message: message as string,
+    survey_id: params.surveyId,
+  });
 };
 
 interface Questions {
@@ -81,7 +90,7 @@ const questions: Questions[] = [
   },
 ];
 
-export default function Survey({ params }: Route.ComponentProps) {
+export default function Survey({ params, loaderData }: Route.ComponentProps) {
   const { data: questions } = useReadContract({
     address: params.surveyId as `0x{string}`,
     abi: SURVEY_ABI,
@@ -134,6 +143,7 @@ export default function Survey({ params }: Route.ComponentProps) {
   });
   const [counts, setCounts] = useState<Number[][]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [messages, setMessages] = useState(loaderData ? loaderData : []);
 
   const countAnswers = () => {
     // 0:[0,0,0] --> [1,0,0]
@@ -161,6 +171,28 @@ export default function Survey({ params }: Route.ComponentProps) {
       }
     }
   }, [answers, address, target]);
+
+  useEffect(() => {
+    const channels = supabase
+      .channel("message_insert_event")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "message",
+          filter: `survey_id=eq.${params.surveyId}`,
+        },
+        (payload) => {
+          setMessages((existing) => [
+            ...existing,
+            payload.new as Database["public"]["Tables"]["message"]["Row"],
+          ]);
+        }
+      )
+      .subscribe();
+  }, []);
+
   return (
     <div className="grid grid-cols-3 w-screen gap-3">
       <Card className="col-span-2">
@@ -226,18 +258,37 @@ export default function Survey({ params }: Route.ComponentProps) {
           <CardTitle>Live Chat</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5 overflow-y-auto h-[70vh]">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <MessageBubble sender={i % 2 == 0} />
-          ))}
+          {messages &&
+            messages.map((m, i) => (
+              <MessageBubble
+                isSender={m.sender === address}
+                sender={m.sender}
+                message={m.message}
+                created_at={m.created_at!}
+              />
+            ))}
         </CardContent>
         <CardFooter className="w-full">
-          <Form className="flex flex-row items-center relative w-full">
+          <Form
+            method="post"
+            className="flex flex-row items-center relative w-full"
+          >
             <input
               type="text"
               placeholder="type a message..."
               className="border-1 w-full h-8 rounded-2xl px-2 text-xs"
+              name="message"
             />
-            <Button className="flex flex-row justify-center items-center w-6 h-6 absolute right-2">
+            <input
+              type="text"
+              className="hidden"
+              name="sender"
+              value={address}
+            />
+            <Button
+              type="submit"
+              className="flex flex-row justify-center items-center w-6 h-6 absolute right-2"
+            >
               <SendIcon />
             </Button>
           </Form>

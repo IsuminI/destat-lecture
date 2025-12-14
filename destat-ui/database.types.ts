@@ -86,6 +86,45 @@ export type Database = {
         }
         Relationships: []
       }
+      message: {
+        Row: {
+          created_at: string | null
+          id: number
+          message: string
+          sender: string
+          survey_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          message: string
+          sender: string
+          survey_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          message?: string
+          sender?: string
+          survey_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_survey_id_survey_id_fk"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "all_survey_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_survey_id_survey_id_fk"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "survey"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey: {
         Row: {
           created_at: string | null

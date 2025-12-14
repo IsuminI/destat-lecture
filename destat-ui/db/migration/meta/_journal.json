@@ -50,6 +50,13 @@
       "when": 1765549141514,
       "tag": "0006_fine_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1765692440306,
+      "tag": "0007_safe_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

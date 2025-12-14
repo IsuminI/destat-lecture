@@ -47,3 +47,11 @@ export const answer = pgTable("answer", {
   survey_id: varchar().references(() => survey.id),
   created_at: timestamp().defaultNow(),
 });
+
+export const message = pgTable("message", {
+  id: serial().primaryKey(),
+  survey_id: varchar().references(() => survey.id),
+  message: text().notNull(),
+  sender: varchar().notNull(),
+  created_at: timestamp().defaultNow(),
+});
