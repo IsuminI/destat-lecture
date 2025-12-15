@@ -51,10 +51,15 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   const thisWeekEnd = DateTime.now().toISO({ includeOffset: false });
   const lastWeekStart = DateTime.now()
     .startOf("week")
+    .minus({ weeks: 1 })
     .toISO({ includeOffset: false });
 
   const { data: liveSurveyCount } = await supabase
     .from("daily_live_survey")
+    .select("count, created_at")
+    .order("created_at");
+  const { data: archiveSurveyCount } = await supabase
+    .from("daily_archive_survey")
     .select("count, created_at")
     .order("created_at");
   let formedLivedSurveyCount = [{ date: "", data: 0 }];
@@ -66,7 +71,9 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
         data: c.count,
       };
     });
-    formedArchivedSurveyCount = liveSurveyCount.map((c) => {
+  }
+  if (archiveSurveyCount) {
+    formedArchivedSurveyCount = archiveSurveyCount.map((c) => {
       return {
         date: c.created_at,
         data: c.count,
@@ -82,19 +89,22 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   const totalVisitors = await getNumberData(
     lastWeekStart,
     thisWeekStart,
-    thisWeekEnd
+    thisWeekEnd,
+    "total"
   );
 
   const liveVisitors = await getNumberData(
     lastWeekStart,
     thisWeekStart,
-    thisWeekEnd
+    thisWeekEnd,
+    "live"
   );
 
   const archivedVisitors = await getNumberData(
     lastWeekStart,
     thisWeekStart,
-    thisWeekEnd
+    thisWeekEnd,
+    "archive"
   );
   return {
     ...totalVisitors,

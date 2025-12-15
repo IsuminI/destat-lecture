@@ -10,3 +10,8 @@ export const dailyLiveVisitor = pgTable("daily_live_survey", {
   count: bigint({ mode: "number" }).default(0),
   created_at: timestamp().defaultNow(),
 });
+export const dailyArchiveVisitor = pgTable("daily_archive_survey", {
+  id: serial().notNull().primaryKey(),
+  count: bigint({ mode: "number" }).default(0),
+  created_at: timestamp().defaultNow(),
+});

@@ -50,6 +50,24 @@ export type Database = {
           },
         ]
       }
+      daily_archive_survey: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          id: number
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          id?: number
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       daily_live_survey: {
         Row: {
           count: number | null

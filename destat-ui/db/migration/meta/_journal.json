@@ -57,6 +57,13 @@
       "when": 1765692440306,
       "tag": "0007_safe_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1765699292758,
+      "tag": "0008_groovy_psylocke",
+      "breakpoints": true
     }
   ]
 }
